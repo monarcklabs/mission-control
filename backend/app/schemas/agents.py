@@ -296,6 +296,25 @@ class AgentHeartbeatCreate(AgentHeartbeat):
     )
 
 
+class DiscoveredAgentRead(SQLModel):
+    """Read-only gateway-configured agent visible to Mission Control."""
+
+    config_agent_id: str = Field(description="Raw agent id from gateway config.")
+    name: str = Field(description="Gateway-configured display name.")
+    gateway_id: UUID = Field(description="Gateway UUID that exposes this agent.")
+    gateway_name: str = Field(description="Gateway display name.")
+    workspace: str | None = Field(default=None, description="Configured workspace path.")
+    model: str | None = Field(default=None, description="Configured primary model.")
+    heartbeat_every: str | None = Field(
+        default=None,
+        description="Configured heartbeat cadence string.",
+    )
+    skills: list[str] = Field(
+        default_factory=list,
+        description="Configured skill ids from gateway config.",
+    )
+
+
 class AgentNudge(SQLModel):
     """Nudge message payload for pinging an agent."""
 

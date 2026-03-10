@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/auth/clerk";
@@ -13,7 +13,7 @@ import { DashboardPageLayout } from "@/components/templates/DashboardPageLayout"
 import { Button } from "@/components/ui/button";
 import { ConfirmActionDialog } from "@/components/ui/confirm-action-dialog";
 
-import { ApiError } from "@/api/mutator";
+import { ApiError, customFetch } from "@/api/mutator";
 import {
   type listAgentsApiV1AgentsGetResponse,
   getListAgentsApiV1AgentsGetQueryKey,
@@ -39,6 +39,17 @@ const AGENT_SORTABLE_COLUMNS = [
   "updated_at",
 ];
 
+type DiscoveredAgent = {
+  config_agent_id: string;
+  name: string;
+  gateway_id: string;
+  gateway_name: string;
+  workspace: string | null;
+  model: string | null;
+  heartbeat_every: string | null;
+  skills: string[];
+};
+
 export default function AgentsPage() {
   const { isSignedIn } = useAuth();
   const queryClient = useQueryClient();
@@ -52,6 +63,8 @@ export default function AgentsPage() {
   });
 
   const [deleteTarget, setDeleteTarget] = useState<AgentRead | null>(null);
+  const [discoveredAgents, setDiscoveredAgents] = useState<DiscoveredAgent[]>([]);
+  const [discoveredError, setDiscoveredError] = useState<string | null>(null);
 
   const boardsKey = getListBoardsApiV1BoardsGetQueryKey();
   const agentsKey = getListAgentsApiV1AgentsGetQueryKey();
@@ -92,6 +105,37 @@ export default function AgentsPage() {
         : [],
     [agentsQuery.data],
   );
+
+  useEffect(() => {
+    if (!isSignedIn || !isAdmin) {
+      setDiscoveredAgents([]);
+      setDiscoveredError(null);
+      return;
+    }
+    let cancelled = false;
+    void customFetch<{
+      data: DiscoveredAgent[];
+      status: number;
+      headers: Headers;
+    }>("/api/v1/agents/discovered", {
+      method: "GET",
+    })
+      .then((response) => {
+        if (cancelled) return;
+        setDiscoveredAgents(response.data ?? []);
+        setDiscoveredError(null);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setDiscoveredAgents([]);
+        setDiscoveredError(
+          error instanceof Error ? error.message : "Failed to load configured gateway agents.",
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, isSignedIn]);
 
   const deleteMutation = useDeleteAgentApiV1AgentsAgentIdDelete<
     ApiError,
@@ -166,6 +210,76 @@ export default function AgentsPage() {
           <p className="mt-4 text-sm text-red-500">
             {agentsQuery.error.message}
           </p>
+        ) : null}
+
+        {discoveredAgents.length > 0 ? (
+          <div className="mt-8 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 px-6 py-4">
+              <h2 className="text-sm font-semibold text-slate-900">
+                Configured Gateway Agents
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Read-only agents detected from the gateway config. These were not
+                created by Mission Control, so edit and delete actions are not available here yet.
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left font-medium text-slate-500">
+                      Agent
+                    </th>
+                    <th className="px-6 py-3 text-left font-medium text-slate-500">
+                      Gateway
+                    </th>
+                    <th className="px-6 py-3 text-left font-medium text-slate-500">
+                      Model
+                    </th>
+                    <th className="px-6 py-3 text-left font-medium text-slate-500">
+                      Heartbeat
+                    </th>
+                    <th className="px-6 py-3 text-left font-medium text-slate-500">
+                      Skills
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {discoveredAgents.map((agent) => (
+                    <tr key={`${agent.gateway_id}-${agent.config_agent_id}`}>
+                      <td className="px-6 py-4 align-top">
+                        <div className="font-medium text-slate-900">{agent.name}</div>
+                        <div className="font-mono text-xs text-slate-500">
+                          ID {agent.config_agent_id}
+                        </div>
+                        {agent.workspace ? (
+                          <div className="mt-1 font-mono text-xs text-slate-500">
+                            {agent.workspace}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="px-6 py-4 align-top text-slate-700">
+                        {agent.gateway_name}
+                      </td>
+                      <td className="px-6 py-4 align-top text-slate-700">
+                        {agent.model ?? "—"}
+                      </td>
+                      <td className="px-6 py-4 align-top text-slate-700">
+                        {agent.heartbeat_every ?? "—"}
+                      </td>
+                      <td className="px-6 py-4 align-top text-slate-700">
+                        {agent.skills.length > 0 ? agent.skills.join(", ") : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
+
+        {discoveredError ? (
+          <p className="mt-4 text-sm text-red-500">{discoveredError}</p>
         ) : null}
       </DashboardPageLayout>
 

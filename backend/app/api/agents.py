@@ -18,9 +18,11 @@ from app.schemas.agents import (
     AgentHeartbeatCreate,
     AgentRead,
     AgentUpdate,
+    DiscoveredAgentRead,
 )
 from app.schemas.common import OkResponse
 from app.schemas.pagination import DefaultLimitOffsetPage
+from app.services.discovered_agents import list_discovered_agents
 from app.services.openclaw.provisioning_db import AgentLifecycleService, AgentUpdateOptions
 from app.services.organizations import OrganizationContext
 
@@ -71,6 +73,18 @@ async def list_agents(
         board_id=board_id,
         gateway_id=gateway_id,
         ctx=ctx,
+    )
+
+
+@router.get("/discovered", response_model=list[DiscoveredAgentRead])
+async def list_discovered_gateway_agents(
+    session: AsyncSession = SESSION_DEP,
+    ctx: OrganizationContext = ORG_ADMIN_DEP,
+) -> list[DiscoveredAgentRead]:
+    """List read-only agents configured directly on organization gateways."""
+    return await list_discovered_agents(
+        session,
+        organization_id=ctx.organization.id,
     )
 
 
