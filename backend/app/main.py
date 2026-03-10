@@ -37,8 +37,9 @@ from app.core.logging import configure_logging, get_logger
 from app.core.rate_limit import validate_rate_limit_redis
 from app.core.rate_limit_backend import RateLimitBackend
 from app.core.security_headers import SecurityHeadersMiddleware
-from app.db.session import init_db
+from app.db.session import async_session_maker, init_db
 from app.schemas.health import HealthStatusResponse
+from app.services.mission_control_profile import sync_profile_fields_for_all_organizations
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -439,6 +440,8 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         settings.db_auto_migrate,
     )
     await init_db()
+    async with async_session_maker() as session:
+        await sync_profile_fields_for_all_organizations(session)
     if settings.rate_limit_backend == RateLimitBackend.REDIS:
         validate_rate_limit_redis(settings.rate_limit_redis_url)
         logger.info("app.lifecycle.rate_limit backend=redis")

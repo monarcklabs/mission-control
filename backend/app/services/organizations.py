@@ -23,6 +23,7 @@ from app.models.organization_members import OrganizationMember
 from app.models.organizations import Organization
 from app.models.skills import SkillPack
 from app.models.users import User
+from app.services.mission_control_profile import sync_profile_fields_for_organization
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -348,6 +349,11 @@ async def ensure_member_for_user(
             await session.rollback()
             normalized_existing_pack_urls.add(normalized_source_url)
             continue
+
+    await sync_profile_fields_for_organization(
+        session=session,
+        organization_id=org_id,
+    )
 
     await session.refresh(member)
     return member

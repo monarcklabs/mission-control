@@ -160,3 +160,61 @@ async def test_delete_board_ignores_missing_gateway_agent(monkeypatch: pytest.Mo
     assert called["delete_agent_lifecycle"] == 1
     assert board in session.deleted
     assert session.committed == 1
+
+
+@pytest.mark.asyncio
+async def test_create_board_binds_existing_custom_fields(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Creating a board should attach existing org-level custom fields."""
+    session: Any = _FakeSession(exec_results=[])
+    organization_id = uuid4()
+    board = Board(
+        id=uuid4(),
+        organization_id=organization_id,
+        name="Demo Board",
+        slug="demo-board",
+        gateway_id=uuid4(),
+    )
+
+    async def _fake_create(_session: object, _model: object, **data: object) -> Board:
+        _ = data
+        return board
+
+    async def _fake_bind_existing_custom_fields_to_board(
+        *,
+        session: object,
+        organization_id: object,
+        board_id: object,
+    ) -> int:
+        assert session is _FakeSession_instance
+        assert organization_id == board.organization_id
+        assert board_id == board.id
+        return 2
+
+    _FakeSession_instance = session
+    monkeypatch.setattr(boards.crud, "create", _fake_create)
+    monkeypatch.setattr(
+        boards,
+        "bind_existing_custom_fields_to_board",
+        _fake_bind_existing_custom_fields_to_board,
+    )
+
+    payload = SimpleNamespace(
+        model_dump=lambda: {
+            "name": board.name,
+            "slug": board.slug,
+            "description": "desc",
+            "gateway_id": board.gateway_id,
+        }
+    )
+    ctx = SimpleNamespace(organization=SimpleNamespace(id=organization_id))
+
+    created = await boards.create_board(
+        payload=payload,
+        _gateway=SimpleNamespace(),
+        _board_group=None,
+        session=session,
+        ctx=ctx,
+    )
+
+    assert created is board
+    assert session.committed == 1
