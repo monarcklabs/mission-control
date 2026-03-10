@@ -476,7 +476,7 @@ function InfoBlock({
   );
 }
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const router = useRouter();
   const { isSignedIn } = useAuth();
   const { isAdvanced } = useDashboardView();
@@ -892,7 +892,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <DashboardShell>
+    <>
       <SignedOut>
         <SignedOutPanel
           message="Sign in to access the dashboard."
@@ -1159,6 +1159,14 @@ export default function DashboardPage() {
           </div>
         </main>
       </SignedIn>
+    </>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <DashboardShell>
+      <DashboardPageContent />
     </DashboardShell>
   );
 }

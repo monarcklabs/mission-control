@@ -21,8 +21,8 @@ import { useAuth } from "@/auth/clerk";
 import { ApiError } from "@/api/mutator";
 import { useOrganizationMembership } from "@/lib/use-organization-membership";
 import {
-  type healthzHealthzGetResponse,
-  useHealthzHealthzGet,
+  type healthHealthGetResponse,
+  useHealthHealthGet,
 } from "@/api/generated/default/default";
 import { useDashboardView } from "@/components/providers/DashboardViewProvider";
 import { cn } from "@/lib/utils";
@@ -32,7 +32,7 @@ export function DashboardSidebar() {
   const { isSignedIn } = useAuth();
   const { isAdmin } = useOrganizationMembership(isSignedIn);
   const { mode, setMode, isAdvanced } = useDashboardView();
-  const healthQuery = useHealthzHealthzGet<healthzHealthzGetResponse, ApiError>(
+  const healthQuery = useHealthHealthGet<healthHealthGetResponse, ApiError>(
     {
       query: {
         refetchInterval: 30_000,
