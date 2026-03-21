@@ -84,6 +84,11 @@ class Settings(BaseSettings):
     # OpenClaw gateway runtime compatibility
     gateway_min_version: str = "2026.02.9"
 
+    # Self-update: set SELF_UPDATE_REPO_PATH to the host-mounted repo directory
+    # (e.g. /repo) to enable branch switching from the UI.
+    self_update_repo_path: str = ""
+    self_update_compose_project: str = "openclaw-mission-control"
+
     # Logging
     log_level: str = "INFO"
     log_format: str = "text"

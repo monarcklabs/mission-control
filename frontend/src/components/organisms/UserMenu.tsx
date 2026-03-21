@@ -164,6 +164,7 @@ export function UserMenu({
               },
               { href: "/skills/packs", label: "Skill packs", icon: Boxes },
               { href: "/settings", label: "Settings", icon: Settings },
+              { href: "/settings/system", label: "System", icon: Server },
             ] as const
           ).map((item) => (
             <Link
